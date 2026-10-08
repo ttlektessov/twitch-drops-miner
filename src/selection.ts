@@ -53,8 +53,10 @@ export function rankCampaigns(campaigns: Campaign[], priority: PriorityGame[], n
 
 const remaining = (d: Drop) => d.requiredMinutes - d.currentMinutes;
 
+// A finished drop that is not claimed yet stays earnable but no longer progresses, so prefer one that still needs minutes.
 export function currentDrop(c: Campaign, now: Date): Drop | null {
-  return earnableDrops(c, now).sort((a, b) => remaining(a) - remaining(b))[0] ?? null;
+  const drops = earnableDrops(c, now).sort((a, b) => remaining(a) - remaining(b));
+  return drops.find((d) => remaining(d) > 0) ?? drops[0] ?? null;
 }
 
 export function upcomingDrops(c: Campaign, now: Date, current: Drop | null): Drop[] {

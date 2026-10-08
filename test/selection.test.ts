@@ -37,6 +37,13 @@ describe('drops', () => {
     expect(currentDrop(makeCampaign({ drops: [far, near] }), NOW)?.id).toBe(near.id);
   });
 
+  it('currentDrop prefers drops that still need minutes over finished, unclaimed ones', () => {
+    const finished = makeDrop({ requiredMinutes: 60, currentMinutes: 60 });
+    const running = makeDrop({ requiredMinutes: 120, currentMinutes: 10 });
+    expect(currentDrop(makeCampaign({ drops: [finished, running] }), NOW)?.id).toBe(running.id);
+    expect(currentDrop(makeCampaign({ drops: [finished] }), NOW)?.id).toBe(finished.id);
+  });
+
   it('currentDrop skips drops whose preconditions are unclaimed', () => {
     const first = makeDrop({ id: 'first', requiredMinutes: 60 });
     const second = makeDrop({ id: 'second', requiredMinutes: 10, preconditionIds: ['first'] });

@@ -3,7 +3,7 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
 import {
-  addGame, ConfigError, loadConfig, moveGame, removeGame, saveConfig, type Config,
+  addGame, assertConfigReadable, ConfigError, loadConfig, moveGame, removeGame, saveConfig, type Config,
 } from '../src/config.js';
 
 const tmp = () => mkdtempSync(join(tmpdir(), 'tdm-config-'));
@@ -31,6 +31,21 @@ describe('loadConfig / saveConfig', () => {
     expect(loadConfig(dir)).toEqual(withGames(rust));
     writeFileSync(join(dir, 'config.json'), JSON.stringify({ priorityGames: [rust] }));
     expect(loadConfig(dir).settings.fetchStream).toBe(true);
+  });
+});
+
+describe('assertConfigReadable', () => {
+  it('passes for a missing or valid file', () => {
+    const dir = tmp();
+    expect(() => assertConfigReadable(dir)).not.toThrow();
+    saveConfig(withGames(rust), dir);
+    expect(() => assertConfigReadable(dir)).not.toThrow();
+  });
+
+  it('refuses a corrupt file so an edit cannot overwrite the list', () => {
+    const dir = tmp();
+    writeFileSync(join(dir, 'config.json'), '{ "priorityGames": [1,], }');
+    expect(() => assertConfigReadable(dir)).toThrow(/not valid JSON/);
   });
 });
 

@@ -1,6 +1,6 @@
 import type { PriorityGame } from './config.js';
 import {
-  buildQueue, claimableDrops, currentDrop, isCampaignEligible, pickChannel, priorityIndex, rankCampaigns,
+  buildQueue, claimableDrops, currentDrop, earnableDrops, isCampaignEligible, pickChannel, priorityIndex, rankCampaigns,
   upcomingDrops, type QueueEntry,
 } from './selection.js';
 import { AuthError, GqlOperationError } from './twitch/errors.js';
@@ -59,14 +59,27 @@ export type MinerDeps = {
 
 const LOG_LIMIT = 10;
 
+const BEACON_FAILURE_LIMIT = 3;
+
 type Active = {
   campaign: Campaign;
   channel: LiveChannel;
   estimate: number;
-  lastReal: number | null;
-  lastDropId: string | null;
+  progress: Progress;
   stalls: number;
 };
+
+// Progress across every earnable drop, so a finished-but-unclaimed drop doesn't look like a stall.
+type Progress = { key: string; total: number; allDone: boolean };
+
+function progressOf(campaign: Campaign, now: Date): Progress {
+  const drops = earnableDrops(campaign, now);
+  return {
+    key: drops.map((d) => d.id).sort().join(','),
+    total: drops.reduce((sum, d) => sum + d.currentMinutes, 0),
+    allDone: drops.every((d) => d.currentMinutes >= d.requiredMinutes),
+  };
+}
 
 type Choice = { campaign: Campaign; channel: LiveChannel };
 
@@ -88,6 +101,7 @@ export class Miner {
   private retryAt = 0;
   private error: string | null = null;
   private loginRequired = false;
+  private beaconFailures = 0;
 
   constructor(private readonly deps: MinerDeps) {
     this.iv = { ...DEFAULT_INTERVALS, ...deps.intervals };
@@ -161,15 +175,24 @@ export class Miner {
       if (this.active) this.active.estimate += 1;
     }
 
+    // stop() may have landed while we were waiting on Twitch.
+    if (!this.running) {
+      this.active = null;
+      return;
+    }
     const active = this.active;
     if (active) {
-      await this.deps.watcher.watch({
+      const result = await this.deps.watcher.watch({
         channelId: active.channel.id,
         login: active.channel.login,
         broadcastId: active.channel.broadcastId,
         gameId: active.campaign.game.id,
         gameName: active.campaign.game.name,
       });
+      if (result.beacon) this.beaconFailures = 0;
+      else if (++this.beaconFailures === BEACON_FAILURE_LIMIT) {
+        this.addLog('error', 'Minute-watched beacon keeps failing, so drops will not progress. Twitch may have changed its player.');
+      }
     }
     if (talkedToTwitch) {
       this.error = null;
@@ -225,13 +248,12 @@ export class Miner {
       this.excludedFor = null;
     }
     this.deps.watcher.reset();
-    const drop = currentDrop(choice.campaign, new Date());
+    const now = new Date();
     this.active = {
       campaign: choice.campaign,
       channel: choice.channel,
-      estimate: drop?.currentMinutes ?? 0,
-      lastReal: drop?.currentMinutes ?? null,
-      lastDropId: drop?.id ?? null,
+      estimate: currentDrop(choice.campaign, now)?.currentMinutes ?? 0,
+      progress: progressOf(choice.campaign, now),
       stalls: 0,
     };
     this.lastProgressAt = Date.now();
@@ -264,13 +286,12 @@ export class Miner {
     if (live.gameId !== fresh.game.id) return this.switchChannel(active, 'streamer changed game');
     active.channel = { ...active.channel, viewers: live.viewers, broadcastId: live.broadcastId };
 
-    const drop = currentDrop(fresh, now);
-    const real = drop?.currentMinutes ?? 0;
-    const sameDrop = drop !== null && drop.id === active.lastDropId;
-    active.stalls = sameDrop && active.lastReal !== null && real <= active.lastReal ? active.stalls + 1 : 0;
-    active.lastReal = real;
-    active.lastDropId = drop?.id ?? null;
-    active.estimate = real;
+    const progress = progressOf(fresh, now);
+    const stalled =
+      !progress.allDone && progress.key === active.progress.key && progress.total <= active.progress.total;
+    active.stalls = stalled ? active.stalls + 1 : 0;
+    active.progress = progress;
+    active.estimate = currentDrop(fresh, now)?.currentMinutes ?? 0;
     if (active.stalls >= this.iv.stallChecks) await this.switchChannel(active, 'no progress for several minutes');
   }
 

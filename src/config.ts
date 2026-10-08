@@ -1,4 +1,4 @@
-import { mkdirSync, readFileSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { homedir } from 'node:os';
 import { dirname, join } from 'node:path';
 
@@ -39,6 +39,14 @@ export function loadConfig(dir = dataDir()): Config {
     priorityGames: Array.isArray(games) ? games : [],
     settings: { ...DEFAULT_SETTINGS, ...(raw?.settings ?? {}) },
   };
+}
+
+// Call before editing the list: a corrupt file would otherwise load as empty and be overwritten.
+export function assertConfigReadable(dir = dataDir()): void {
+  const path = join(dir, 'config.json');
+  if (existsSync(path) && readJson(path) === null) {
+    throw new ConfigError(`${path} is not valid JSON. Fix or delete it, then try again.`);
+  }
 }
 
 export function saveConfig(config: Config, dir = dataDir()): void {

@@ -209,6 +209,57 @@ describe('Miner', () => {
     miner.stop();
   });
 
+  it('stays on a channel where another drop progresses while a finished drop cannot be claimed', async () => {
+    const { api, miner } = setup();
+    const stuck = makeDrop({ benefitNames: ['Hoodie'], requiredMinutes: 60, currentMinutes: 60 });
+    const moving = makeDrop({ benefitNames: ['Door Skin'], requiredMinutes: 120, currentMinutes: 10 });
+    const one = makeCampaign({ drops: [stuck, moving] });
+    api.campaigns = [one];
+    api.channels = { [one.id]: [makeChannel({ login: 'a', viewers: 900 }), makeChannel({ login: 'b', viewers: 100 })] };
+    miner.start();
+    await run(0);
+    api.campaigns[0].drops[1].currentMinutes = 13;
+    await run(180_000);
+    api.campaigns[0].drops[1].currentMinutes = 16;
+    await run(180_000);
+    expect(miner.getState().target?.channel.login).toBe('a');
+    expect(miner.getState().target?.drop?.name).toBe('Door Skin');
+    miner.stop();
+  });
+
+  it('does not watch after stop() lands during an in-flight tick', async () => {
+    const { api, watcher, miner } = setup();
+    const one = makeCampaign();
+    api.campaigns = [one];
+    api.channels = { [one.id]: [makeChannel({ login: 'a' })] };
+    let release!: () => void;
+    const gate = new Promise<void>((r) => { release = r; });
+    const original = api.getCampaigns.bind(api);
+    api.getCampaigns = async (ids?: string[]) => { await gate; return original(ids); };
+    miner.start();
+    await run(0);
+    miner.stop();
+    release();
+    await run(60_000);
+    expect(watcher.watched).toEqual([]);
+  });
+
+  it('logs once when the minute-watched beacon keeps failing', async () => {
+    const { api, watcher, miner, logs } = setup({ stallChecks: 99 });
+    watcher.watch = async (t: WatchTarget) => { watcher.watched.push(t.login); return { beacon: false, stream: null }; };
+    const one = makeCampaign();
+    api.campaigns = [one];
+    api.channels = { [one.id]: [makeChannel({ login: 'a' })] };
+    miner.start();
+    await run(0);
+    await run(120_000);
+    const beaconErrors = () => logs.filter((l) => l.kind === 'error' && l.message.includes('beacon'));
+    expect(beaconErrors()).toHaveLength(1);
+    await run(180_000);
+    expect(beaconErrors()).toHaveLength(1);
+    miner.stop();
+  });
+
   it('keeps its target through network errors and retries after 5 minutes', async () => {
     const { api, miner } = setup({ stallChecks: 99 });
     const one = makeCampaign();

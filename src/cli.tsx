@@ -7,7 +7,7 @@ import {
   CLIENT_ID, loadSession, pollForToken, saveSession, startDeviceLogin, USER_AGENT, validateToken, type Session,
 } from './auth.js';
 import { appendLog, formatCampaignList, formatGames } from './commands.js';
-import { addGame, dataDir, loadConfig, moveGame, removeGame, saveConfig } from './config.js';
+import { addGame, assertConfigReadable, dataDir, loadConfig, moveGame, removeGame, saveConfig } from './config.js';
 import { Miner } from './miner.js';
 import { GqlClient, randomHex, type GqlRequester } from './twitch/gql.js';
 import { TwitchApi } from './twitch/queries.js';
@@ -77,6 +77,7 @@ games
   .description('Add a game to the end of the priority list')
   .action(async (parts: string[]) => {
     const name = parts.join(' ');
+    assertConfigReadable();
     const { api } = makeClients(await requireSession());
     const game = await api.resolveGame(name);
     if (!game) throw new Error(`No Twitch game named "${name}". Use the exact name shown on Twitch.`);
@@ -90,6 +91,7 @@ games
   .argument('<name...>', 'game name')
   .description('Remove a game from the priority list')
   .action((parts: string[]) => {
+    assertConfigReadable();
     const config = removeGame(loadConfig(), parts.join(' '));
     saveConfig(config);
     console.log(formatGames(config.priorityGames));
@@ -101,6 +103,7 @@ games
   .argument('<position>', 'new 1-based position')
   .description('Move a game to a new position')
   .action((name: string, position: string) => {
+    assertConfigReadable();
     const config = moveGame(loadConfig(), name, Number(position));
     saveConfig(config);
     console.log(formatGames(config.priorityGames));
@@ -143,6 +146,8 @@ program
     );
     miner.start();
     await app.waitUntilExit();
+    // A tick may still be waiting on a GQL retry; don't let it hold the terminal or keep beaconing.
+    process.exit(0);
   });
 
 program.parseAsync().catch((err: unknown) => {
