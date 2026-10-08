@@ -121,7 +121,7 @@ Runs at startup, every 15 minutes, on `r`, and after any switch trigger.
 | `drops login` | Device-code login |
 | `drops list` | Table of all active campaigns: game, campaign, rewards with minutes, ends, linked, progress |
 | `drops games` | Show priority list |
-| `drops games add <name>` | Look up the game by name on Twitch and append it (asks the user to choose when the search is ambiguous) |
+| `drops games add <name>` | Look up the game by its exact Twitch name (case-insensitive, via Twitch's game redirect lookup) and append it; error if not found |
 | `drops games remove <name>` | Remove it |
 | `drops games move <name> <position>` | Reorder |
 | `drops start` | Live dashboard |
@@ -182,6 +182,13 @@ Runs at startup, every 15 minutes, on `r`, and after any switch trigger.
   3. Confirm progress increases on twitch.tv/drops/inventory.
   4. Repeat with `fetchStream: false` to see whether the beacon alone is enough.
 
-## Open item (resolved during implementation)
+## Twitch API notes (checked 2026-10-08)
 
-Before building `watcher.ts` and `queries.ts`, check the current state of Twitch's internal API: GQL operation names and persisted-query hashes, how the beacon URL is found, and the client IDs. Reference DevilXD/TwitchDropsMiner for this. Record what is found in `queries.ts` comments.
+Verified against DevilXD/TwitchDropsMiner (master, 2026-09-26) and live public GQL calls:
+- Client: Android app client ID `kd1unb4b3q4t58fwlpcbzcbnm76a8fp` for the device login and all GQL calls (the token is tied to the client ID).
+- Persisted queries: `Inventory`, `ViewerDropsDashboard`, `DropCampaignDetails`, `DropsPage_ClaimDropRewards`, `PlaybackAccessToken`, `DirectoryPage_Game`, `DirectoryGameRedirect`, `VideoPlayerStreamInfoOverlayChannel`. The hashes are in `queries.ts`.
+- Beacon: POST form `data=<base64 JSON>` to the spade URL found in `assets.twitch.tv/config/settings.<hash>.js` (currently `https://spade.twitch.tv/track`). Success is HTTP 204.
+- Stream fetch: playback token, then usher master playlist, then the lowest-quality variant playlist, then a HEAD request on the newest segment. A HEAD request is enough; no video bytes are downloaded.
+- Subscription-only drops have `requiredMinutesWatched: 0` and `requiredSubs > 0`.
+- Campaigns whose rewards are all badges or emotes need no account link, so they count as eligible even when `isAccountConnected` is false.
+- Some channel-specific campaigns have `game: null`; these are skipped.
