@@ -35,13 +35,20 @@ export function usherUrl(login: string, signature: string, token: string): strin
   return `https://usher.ttvnw.net/api/channel/hls/${encodeURIComponent(login)}.m3u8?${params}`;
 }
 
-export function lastMediaLine(playlist: string): string | null {
-  const lines = playlist
+function mediaLines(playlist: string): string[] {
+  return playlist
     .split('\n')
     .map((l) => l.trim())
     .filter((l) => l && !l.startsWith('#'));
-  return lines.at(-1) ?? null;
 }
+
+export function lastMediaLine(playlist: string): string | null {
+  return mediaLines(playlist).at(-1) ?? null;
+}
+
+// Since 2026-10-07 Twitch counts watch time only while segments keep being requested, like a player does.
+const SEGMENT_POLL_MS = 10_000;
+const SEEN_SEGMENTS_LIMIT = 100;
 
 export type WatcherDeps = {
   userId: string;
@@ -54,17 +61,55 @@ export type WatcherDeps = {
 export class TwitchWatcher implements Watcher {
   private spadeUrl: string | null = null;
   private variant: { login: string; url: string } | null = null;
+  private seen = new Set<string>();
+  private poller: { login: string; timer: ReturnType<typeof setTimeout> | null } | null = null;
+  private inFlight: Promise<boolean> | null = null;
 
   constructor(private readonly deps: WatcherDeps) {}
 
   async watch(target: WatchTarget): Promise<WatchResult> {
     const beacon = await this.sendBeacon(target).catch(() => false);
-    const stream = this.deps.fetchStream() ? await this.headSegment(target).catch(() => false) : null;
+    if (!this.deps.fetchStream()) {
+      this.stopPolling();
+      return { beacon, stream: null };
+    }
+    if (this.poller?.login !== target.login) {
+      this.stopPolling();
+      this.poller = { login: target.login, timer: null };
+    }
+    const stream = await this.pollOnce(target);
+    this.schedulePoll(target);
     return { beacon, stream };
   }
 
   reset(): void {
+    this.stopPolling();
     this.variant = null;
+    this.seen.clear();
+  }
+
+  private stopPolling(): void {
+    if (this.poller?.timer) clearTimeout(this.poller.timer);
+    this.poller = null;
+  }
+
+  private schedulePoll(target: WatchTarget): void {
+    const poller = this.poller;
+    if (!poller || poller.timer) return;
+    poller.timer = setTimeout(async () => {
+      poller.timer = null;
+      if (this.poller !== poller) return;
+      await this.pollOnce(target);
+      if (this.poller === poller) this.schedulePoll(target);
+    }, SEGMENT_POLL_MS);
+    poller.timer.unref?.();
+  }
+
+  private pollOnce(target: WatchTarget): Promise<boolean> {
+    this.inFlight ??= this.headNewSegments(target)
+      .catch(() => false)
+      .finally(() => { this.inFlight = null; });
+    return this.inFlight;
   }
 
   private async sendBeacon(target: WatchTarget): Promise<boolean> {
@@ -94,8 +139,8 @@ export class TwitchWatcher implements Watcher {
     return match[1];
   }
 
-  // A HEAD on the newest segment looks like playback without downloading video.
-  private async headSegment(target: WatchTarget): Promise<boolean> {
+  // HEADs on each new segment look like playback without downloading video.
+  private async headNewSegments(target: WatchTarget): Promise<boolean> {
     if (this.variant?.login !== target.login) {
       const res = await this.deps.gql.request(
         op('PlaybackAccessToken', {
@@ -114,10 +159,20 @@ export class TwitchWatcher implements Watcher {
       this.variant = null;
       return false;
     }
-    const segment = lastMediaLine(await media.text());
-    if (!segment) return false;
-    const head = await this.http(segment, { method: 'HEAD' });
-    return head.status === 200;
+    const segments = mediaLines(await media.text());
+    if (segments.length === 0) return false;
+    let ok = true;
+    for (const segment of segments) {
+      if (this.seen.has(segment)) continue;
+      const head = await this.http(segment, { method: 'HEAD' });
+      if (head.status !== 200) {
+        ok = false;
+        continue;
+      }
+      this.seen.add(segment);
+      if (this.seen.size > SEEN_SEGMENTS_LIMIT) this.seen.delete(this.seen.values().next().value!);
+    }
+    return ok;
   }
 
   private http(url: string, init: RequestInit = {}): Promise<Response> {

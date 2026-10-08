@@ -77,14 +77,14 @@ describe('TwitchWatcher', () => {
     await expect(watcher.watch(target)).resolves.toEqual({ beacon: false, stream: null });
   });
 
-  it('HEADs the newest segment of the lowest-quality stream', async () => {
+  it('HEADs every segment of the lowest-quality stream once', async () => {
+    let playlist = '#EXTM3U\n#EXTINF:2.0,\nhttps://video.example/seg1.ts\n#EXTINF:2.0,\nhttps://video.example/seg2.ts\n';
     const { fetch, calls } = routes({
       ...spadeRoutes,
       'https://usher.ttvnw.net/': () => new Response(
         '#EXTM3U\n#EXT-X-STREAM-INF:BANDWIDTH=6000000\nhttps://video.example/720p.m3u8\n#EXT-X-STREAM-INF:BANDWIDTH=200000\nhttps://video.example/160p.m3u8\n'),
-      'https://video.example/160p.m3u8': () => new Response(
-        '#EXTM3U\n#EXTINF:2.0,\nhttps://video.example/seg1.ts\n#EXTINF:2.0,\nhttps://video.example/seg2.ts\n'),
-      'https://video.example/seg2.ts': () => new Response(null, { status: 200 }),
+      'https://video.example/160p.m3u8': () => new Response(playlist),
+      'https://video.example/seg': () => new Response(null, { status: 200 }),
     });
     const gqlCalls: PersistedOp[] = [];
     const gql = {
@@ -93,16 +93,47 @@ describe('TwitchWatcher', () => {
         return { data: { streamPlaybackAccessToken: { value: '{"channel":"posty"}', signature: 'sig123' } } };
       },
     };
+    const heads = () => calls.filter((c) => c.init?.method === 'HEAD').map((c) => c.url.slice(-8));
     const watcher = new TwitchWatcher({ userId: '42', gql, userAgent: 'ua', fetchStream: () => true, fetch });
     await expect(watcher.watch(target)).resolves.toEqual({ beacon: true, stream: true });
     expect(gqlCalls[0].operationName).toBe('PlaybackAccessToken');
-    expect(calls.find((c) => c.url === 'https://video.example/seg2.ts')!.init!.method).toBe('HEAD');
+    expect(heads()).toEqual(['/seg1.ts', '/seg2.ts']);
 
+    playlist = '#EXTM3U\n#EXTINF:2.0,\nhttps://video.example/seg2.ts\n#EXTINF:2.0,\nhttps://video.example/seg3.ts\n';
     await watcher.watch(target);
+    expect(heads()).toEqual(['/seg1.ts', '/seg2.ts', '/seg3.ts']);
     expect(gqlCalls).toHaveLength(1); // the variant playlist URL is cached per channel
     watcher.reset();
     await watcher.watch(target);
     expect(gqlCalls).toHaveLength(2);
+    watcher.reset();
+  });
+
+  it('keeps requesting new segments every 10 seconds until reset', async () => {
+    vi.useFakeTimers();
+    try {
+      let n = 1;
+      const { fetch, calls } = routes({
+        ...spadeRoutes,
+        'https://usher.ttvnw.net/': () => new Response('#EXTM3U\nhttps://video.example/160p.m3u8\n'),
+        'https://video.example/160p.m3u8': () => new Response(`#EXTM3U\n#EXTINF:2.0,\nhttps://video.example/seg${n++}.ts\n`),
+        'https://video.example/seg': () => new Response(null, { status: 200 }),
+      });
+      const gql = { request: async () => ({ data: { streamPlaybackAccessToken: { value: 'v', signature: 's' } } }) };
+      const heads = () => calls.filter((c) => c.init?.method === 'HEAD').length;
+      const watcher = new TwitchWatcher({ userId: '42', gql, userAgent: 'ua', fetchStream: () => true, fetch });
+      await watcher.watch(target);
+      expect(heads()).toBe(1);
+      await vi.advanceTimersByTimeAsync(10_000);
+      expect(heads()).toBe(2);
+      await vi.advanceTimersByTimeAsync(20_000);
+      expect(heads()).toBe(4);
+      watcher.reset();
+      await vi.advanceTimersByTimeAsync(60_000);
+      expect(heads()).toBe(4);
+    } finally {
+      vi.useRealTimers();
+    }
   });
 
   it('reports stream failure when the playlist answer is an error', async () => {

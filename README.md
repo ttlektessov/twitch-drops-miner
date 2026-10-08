@@ -100,9 +100,11 @@ Progress between checks is estimated (+1 minute per minute). Real progress is re
 
 It mines one campaign at a time, because Twitch counts progress on one channel at a time.
 
-"Watching" means two small requests a minute and no video:
-- a "minute-watched" event, the same one Twitch's own player sends;
-- a HEAD request for the newest segment of the lowest-quality stream, which downloads no video bytes.
+"Watching" means small requests and no video:
+- a "minute-watched" event once a minute, the same one Twitch's own player sends;
+- every 10 seconds, a check of the lowest-quality stream's playlist and a HEAD request for each new segment, which downloads no video bytes.
+
+Since 2026-10-07 Twitch counts watch time only while segments keep being requested, so the minute-watched event alone earns nothing.
 
 ## Files
 
@@ -121,7 +123,7 @@ Settings in `config.json`:
 { "settings": { "fetchStream": true } }
 ```
 
-`fetchStream: false` turns off the stream-segment requests and sends only the "minute-watched" event.
+`fetchStream: false` turns off the stream-segment requests and sends only the "minute-watched" event. Drops will not progress with it off, so leave it on.
 
 ## Troubleshooting
 
