@@ -4,7 +4,7 @@ import { render } from 'ink';
 import { appendFileSync } from 'node:fs';
 import { join } from 'node:path';
 import {
-  CLIENT_ID, loadSession, pollForToken, saveSession, startDeviceLogin, USER_AGENT, validateToken, type Session,
+  CLIENT_ID, CLIENT_URL, loadSession, pollForToken, saveSession, startDeviceLogin, USER_AGENT, validateToken, type Session,
 } from './auth.js';
 import { appendLog, formatCampaignList, formatGames } from './commands.js';
 import { addGame, assertConfigReadable, dataDir, loadConfig, moveGame, removeGame, saveConfig } from './config.js';
@@ -37,7 +37,7 @@ function withDebug(gql: GqlRequester): GqlRequester {
 
 function makeClients(session: Session) {
   const gql = withDebug(
-    new GqlClient({ token: session.token, clientId: CLIENT_ID, deviceId: session.deviceId, userAgent: USER_AGENT }),
+    new GqlClient({ token: session.token, clientId: CLIENT_ID, deviceId: session.deviceId, userAgent: USER_AGENT, clientUrl: CLIENT_URL }),
   );
   return { gql, api: new TwitchApi(gql, session.userId) };
 }
@@ -146,11 +146,10 @@ program
     );
     miner.start();
     await app.waitUntilExit();
-    // A tick may still be waiting on a GQL retry; don't let it hold the terminal or keep beaconing.
-    process.exit(0);
   });
 
 program.parseAsync().catch((err: unknown) => {
   console.error(err instanceof Error ? err.message : String(err));
-  process.exit(1);
+  // process.exit() right after a fetch crashes Node 24 on Windows (libuv UV_HANDLE_CLOSING assertion).
+  process.exitCode = 1;
 });

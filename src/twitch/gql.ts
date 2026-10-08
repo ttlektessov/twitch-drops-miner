@@ -16,6 +16,8 @@ export type GqlOptions = {
   clientId: string;
   deviceId: string;
   userAgent: string;
+  /** Origin/Referer the Twitch client normally sends; defaults to the web site. */
+  clientUrl?: string;
   fetch?: typeof fetch;
   sleep?: (ms: number) => Promise<void>;
   retryDelaysMs?: number[];
@@ -90,8 +92,8 @@ export class GqlClient implements GqlRequester {
       'Client-Session-Id': this.sessionId,
       'X-Device-Id': this.opts.deviceId,
       'User-Agent': this.opts.userAgent,
-      Origin: 'https://www.twitch.tv',
-      Referer: 'https://www.twitch.tv/',
+      Origin: this.opts.clientUrl ?? 'https://www.twitch.tv',
+      Referer: `${this.opts.clientUrl ?? 'https://www.twitch.tv'}/`,
     };
   }
 

@@ -1,10 +1,12 @@
 import { join } from 'node:path';
 import { dataDir, readJson, writeJson } from './config.js';
 
-// Twitch Android app client. The device-code login and every GQL call must use the same ID.
-export const CLIENT_ID = 'kd1unb4b3q4t58fwlpcbzcbnm76a8fp';
+// Twitch Android TV ("SmartBox") client. The device-code login and every GQL call must use the same ID.
+// Twitch stopped accepting the Android app client for device login around 2026-09-18.
+export const CLIENT_ID = 'ue6666qo983tsx6so1t0vnawi233wa';
+export const CLIENT_URL = 'https://android.tv.twitch.tv';
 export const USER_AGENT =
-  'Dalvik/2.1.0 (Linux; U; Android 16; SM-S911B Build/TP1A.220624.014) tv.twitch.android.app/25.3.0/2503006';
+  'Mozilla/5.0 (Linux; Android 7.1; Smart Box C1) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/153.0.0.0 Safari/537.36';
 
 export type Session = { token: string; userId: string; login: string; deviceId: string };
 
@@ -24,8 +26,8 @@ function idHeaders(deviceId: string): Record<string, string> {
     'User-Agent': USER_AGENT,
     'X-Device-Id': deviceId,
     'Content-Type': 'application/x-www-form-urlencoded',
-    Origin: 'https://www.twitch.tv',
-    Referer: 'https://www.twitch.tv/',
+    Origin: CLIENT_URL,
+    Referer: `${CLIENT_URL}/`,
   };
 }
 
