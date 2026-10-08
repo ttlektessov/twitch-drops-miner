@@ -1,0 +1,40 @@
+{
+  "data": {
+    "currentUser": {
+      "inventory": {
+        "dropCampaignsInProgress": [
+          {
+            "id": "camp-r6", "name": "R6S S2 2026 15", "status": "ACTIVE",
+            "startAt": "2026-10-07T05:00:00Z", "endAt": "2026-10-10T04:58:59.999Z",
+            "accountLinkURL": "https://drops-register.ubi.com/#/en-US",
+            "self": { "isAccountConnected": true },
+            "game": { "id": "460630", "slug": "tom-clancys-rainbow-six-siege", "name": "Rainbow Six Siege" },
+            "allow": { "channels": [
+              { "id": "65171890", "name": "rainbow6", "url": "https://www.twitch.tv/rainbow6" },
+              { "id": "11111111", "name": "rainbow6es", "url": "https://www.twitch.tv/rainbow6es" }
+            ] },
+            "eventBasedDrops": [],
+            "timeBasedDrops": [
+              { "id": "drop-r1", "name": "Esports Pack", "startAt": "2026-10-07T05:00:00Z", "endAt": "2026-10-10T04:58:59.999Z",
+                "preconditionDrops": null, "requiredMinutesWatched": 60, "requiredSubs": 0,
+                "benefitEdges": [{ "benefit": { "id": "ben-r1", "name": "Esports Pack 26 Stage 2.1", "distributionType": "DIRECT_ENTITLEMENT", "imageAssetURL": "" } }],
+                "self": { "hasPreconditionsMet": true, "currentMinutesWatched": 60, "currentSubs": 0, "isClaimed": true, "dropInstanceID": "inst-r1" } },
+              { "id": "drop-r2", "name": "Esports Pack", "startAt": "2026-10-07T05:00:00Z", "endAt": "2026-10-10T04:58:59.999Z",
+                "preconditionDrops": null, "requiredMinutesWatched": 180, "requiredSubs": 0,
+                "benefitEdges": [{ "benefit": { "id": "ben-r2", "name": "Esports Pack 26 Stage 2.2", "distributionType": "DIRECT_ENTITLEMENT", "imageAssetURL": "" } }],
+                "self": { "hasPreconditionsMet": true, "currentMinutesWatched": 110, "currentSubs": 0, "isClaimed": false, "dropInstanceID": null } }
+            ]
+          },
+          {
+            "id": "camp-old", "name": "R6S S2 2026 12", "status": "EXPIRED",
+            "startAt": "2026-09-01T05:00:00Z", "endAt": "2026-09-04T04:58:59.999Z",
+            "accountLinkURL": "", "self": { "isAccountConnected": true },
+            "game": { "id": "460630", "slug": "tom-clancys-rainbow-six-siege", "name": "Rainbow Six Siege" },
+            "allow": { "channels": null }, "eventBasedDrops": [], "timeBasedDrops": []
+          }
+        ],
+        "gameEventDrops": []
+      }
+    }
+  }
+}

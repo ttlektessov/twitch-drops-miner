@@ -1,7 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { Miner, type Intervals, type LogEntry } from '../src/miner.js';
 import { AuthError, GqlOperationError, NetworkError } from '../src/twitch/errors.js';
-import type { Campaign, LiveChannel, TwitchClient, Watcher, WatchTarget } from '../src/twitch/types.js';
+import type { Campaign, Game, LiveChannel, TwitchClient, Watcher, WatchTarget } from '../src/twitch/types.js';
 import { makeCampaign, makeChannel, makeDrop, NOW, PRIORITY } from './helpers.js';
 
 class FakeApi implements TwitchClient {
@@ -12,10 +12,10 @@ class FakeApi implements TwitchClient {
   error: Error | null = null;
   getCampaignsCalls = 0;
 
-  async getCampaigns(gameIds?: string[]) {
+  async getCampaigns(games: Game[]) {
     this.getCampaignsCalls++;
     if (this.error) throw this.error;
-    return structuredClone(this.campaigns.filter((c) => !gameIds || gameIds.includes(c.game.id)));
+    return structuredClone(this.campaigns.filter((c) => games.some((g) => g.id === c.game.id)));
   }
   async getLiveChannels(c: Campaign) {
     if (this.error) throw this.error;

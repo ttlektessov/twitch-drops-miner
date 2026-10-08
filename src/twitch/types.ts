@@ -22,6 +22,8 @@ export type Campaign = {
   linked: boolean;
   linkUrl: string;
   badgeOrEmoteOnly: boolean;
+  /** Found on a live channel: Twitch did not say whether the game account is linked. */
+  linkUnknown?: boolean;
   startsAt: Date;
   endsAt: Date;
   allowedChannels: { id: string; login: string }[];
@@ -49,7 +51,8 @@ export type WatchTarget = {
 export type WatchResult = { beacon: boolean; stream: boolean | null };
 
 export interface TwitchClient {
-  getCampaigns(gameIds?: string[]): Promise<Campaign[]>;
+  /** Active campaigns: started ones from the inventory plus ones found for these games. */
+  getCampaigns(games: Game[]): Promise<Campaign[]>;
   getLiveChannels(campaign: Campaign): Promise<LiveChannel[]>;
   getStreamInfo(login: string): Promise<LiveChannel | null>;
   claimDrop(claimId: string): Promise<boolean>;

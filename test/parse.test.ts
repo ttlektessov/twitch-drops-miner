@@ -1,6 +1,6 @@
 import { readFileSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
-import { dropLabel, parseCampaigns, parseDirectoryStream, parseStreamInfo } from '../src/twitch/parse.js';
+import { dropLabel, parseAvailableCampaigns, parseCampaigns, parseDirectoryStream, parseStreamInfo } from '../src/twitch/parse.js';
 
 const fixture = (name: string) =>
   JSON.parse(readFileSync(new URL(`./fixtures/${name}`, import.meta.url), 'utf8'));
@@ -59,6 +59,27 @@ describe('parseCampaigns', () => {
     const summary = fixture('dashboard.json')[0];
     const badgeDrop = fixture('details.json')[0].timeBasedDrops[3];
     expect(parseCampaigns([summary], [{ id: 'camp-rust', timeBasedDrops: [badgeDrop] }], {})[0].badgeOrEmoteOnly).toBe(true);
+  });
+});
+
+describe('parseAvailableCampaigns', () => {
+  const raw = fixture('availabledrops.json').data.channel.viewerDropCampaigns;
+  const campaigns = parseAvailableCampaigns(raw, { id: '75738685', login: 'insym' });
+
+  it('builds an active campaign tied to the channel it was found on', () => {
+    expect(campaigns).toHaveLength(1);
+    expect(campaigns[0]).toMatchObject({
+      id: 'camp-phasmo', name: 'Crimson Eye 2026', status: 'ACTIVE',
+      game: { id: '518184', name: 'Phasmophobia', slug: null },
+      linked: true, linkUnknown: true,
+      allowedChannels: [{ id: '75738685', login: 'insym' }],
+    });
+    expect(campaigns[0].drops.map((d) => d.requiredMinutes)).toEqual([60, 120]);
+  });
+
+  it('starts the campaign at its earliest drop', () => {
+    expect(campaigns[0].startsAt.toISOString()).toBe('2026-10-06T17:00:00.000Z');
+    expect(campaigns[0].endsAt.toISOString()).toBe('2026-10-20T00:00:00.000Z');
   });
 });
 

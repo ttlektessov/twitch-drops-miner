@@ -25,7 +25,7 @@ export function formatCampaignList(campaigns: Campaign[], priority: PriorityGame
   const lines: string[] = [];
   for (const c of sorted) {
     const star = rank(c) === Infinity ? '' : ` ★${rank(c) + 1}`;
-    const link = canAccountEarn(c) ? 'linked' : `NOT LINKED → ${c.linkUrl}`;
+    const link = c.linkUnknown ? 'link unknown' : canAccountEarn(c) ? 'linked' : `NOT LINKED → ${c.linkUrl}`;
     lines.push(`${c.game.name}${star} · ${c.name} · ends in ${formatDuration(c.endsAt.getTime() - now.getTime())} · ${link}`);
     for (const d of c.drops) lines.push(`    ${dropLabel(d).padEnd(32)} ${dropStatus(d)}`);
     lines.push('');

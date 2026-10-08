@@ -205,7 +205,7 @@ export class Miner {
     const priority = this.deps.getPriority();
     this.forceSelect = false;
     this.lastSelectAt = now.getTime();
-    this.campaigns = await this.deps.api.getCampaigns(priority.map((g) => g.id));
+    this.campaigns = await this.deps.api.getCampaigns(priority);
     for (const campaign of this.campaigns) await this.claimReady(campaign);
     const ranked = rankCampaigns(this.campaigns, priority, now);
 
@@ -263,7 +263,7 @@ export class Miner {
   private async checkProgress(active: Active): Promise<void> {
     const now = new Date();
     this.lastProgressAt = now.getTime();
-    const fresh = (await this.deps.api.getCampaigns([active.campaign.game.id])).find(
+    const fresh = (await this.deps.api.getCampaigns([active.campaign.game])).find(
       (c) => c.id === active.campaign.id,
     );
     if (!fresh) {

@@ -23,6 +23,11 @@ describe('formatCampaignList', () => {
     expect(text.indexOf('Game Two')).toBeLessThan(text.indexOf('Another Game'));
   });
 
+  it('marks campaigns whose account link Twitch did not report', () => {
+    const found = makeCampaign({ gameId: 'g1', gameName: 'Game One', name: 'Found Camp', linkUnknown: true });
+    expect(formatCampaignList([found], PRIORITY, NOW)).toContain('Game One ★1 · Found Camp · ends in 11d 12h · link unknown');
+  });
+
   it('says when there are no campaigns', () => {
     expect(formatCampaignList([], PRIORITY, NOW)).toBe('No active drop campaigns.');
   });

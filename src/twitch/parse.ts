@@ -79,6 +79,23 @@ export function parseCampaigns(dashboard: Json[], details: Json[], inventory: Js
   return campaigns;
 }
 
+// DropsHighlightService_AvailableDrops lists the campaigns a live channel offers. It has no status,
+// start date or account-link info, so the campaign is treated as active, linked, and tied to that channel.
+export function parseAvailableCampaigns(raw: Json[], channel: { id: string; login: string }): Campaign[] {
+  const summaries = raw
+    .filter((c: Json) => c?.game && Array.isArray(c.timeBasedDrops) && c.timeBasedDrops.length > 0)
+    .map((c: Json) => ({
+      ...c,
+      status: 'ACTIVE',
+      startAt: c.timeBasedDrops
+        .map((d: Json) => d.startAt)
+        .reduce((a: string, b: string) => (new Date(a) <= new Date(b) ? a : b)),
+      self: { isAccountConnected: true },
+      allow: { channels: [{ id: channel.id, name: channel.login }] },
+    }));
+  return parseCampaigns(summaries, [], {}).map((c) => ({ ...c, linkUnknown: true }));
+}
+
 export function parseDirectoryStream(node: Json): LiveChannel {
   return {
     id: String(node.broadcaster.id),

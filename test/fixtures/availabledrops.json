@@ -1,0 +1,30 @@
+{
+  "data": {
+    "channel": {
+      "id": "75738685",
+      "viewerDropCampaigns": [
+        {
+          "id": "camp-phasmo", "name": "Crimson Eye 2026",
+          "game": { "id": "518184", "name": "Phasmophobia" },
+          "detailsURL": "", "endAt": "2026-10-20T00:00:00Z", "imageURL": "", "eventBasedDrops": [],
+          "timeBasedDrops": [
+            { "id": "drop-p1", "name": "Crimson Eye Badge", "startAt": "2026-10-06T17:00:00Z", "endAt": "2026-10-20T00:00:00Z",
+              "requiredMinutesWatched": 60, "requiredSubs": 0,
+              "benefitEdges": [{ "benefit": { "id": "ben-p1", "name": "Crimson Eye", "game": { "id": "518184", "name": "Phasmophobia" }, "imageAssetURL": "" } }] },
+            { "id": "drop-p2", "name": "Crimson Eye Skin", "startAt": "2026-10-07T17:00:00Z", "endAt": "2026-10-20T00:00:00Z",
+              "requiredMinutesWatched": 120, "requiredSubs": 0,
+              "benefitEdges": [{ "benefit": { "id": "ben-p2", "name": "Crimson Skin", "game": { "id": "518184", "name": "Phasmophobia" }, "imageAssetURL": "" } }] }
+          ]
+        },
+        {
+          "id": "camp-channel-badge", "name": "SPOOKY SEASON", "game": null,
+          "detailsURL": "", "endAt": "2026-10-30T23:00:00Z", "imageURL": "", "eventBasedDrops": [],
+          "timeBasedDrops": [
+            { "id": "drop-b1", "name": "", "startAt": "2026-10-08T09:32:51.5Z", "endAt": "2026-10-30T23:00:00Z",
+              "requiredMinutesWatched": 0, "requiredSubs": 5, "benefitEdges": [] }
+          ]
+        }
+      ]
+    }
+  }
+}

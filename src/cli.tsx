@@ -63,7 +63,8 @@ program
   .description('Show all active drop campaigns and your progress')
   .action(async () => {
     const { api } = makeClients(await requireSession());
-    console.log(formatCampaignList(await api.getCampaigns(), loadConfig().priorityGames, new Date()));
+    const priority = loadConfig().priorityGames;
+    console.log(formatCampaignList(await api.getCampaigns(priority), priority, new Date()));
   });
 
 const games = program

@@ -1,7 +1,7 @@
 import type { PriorityGame } from '../config.js';
 import type { GqlRequester, PersistedOp } from './gql.js';
-import { parseCampaigns, parseDirectoryStream, parseStreamInfo } from './parse.js';
-import type { Campaign, LiveChannel, TwitchClient } from './types.js';
+import { parseAvailableCampaigns, parseCampaigns, parseDirectoryStream, parseStreamInfo } from './parse.js';
+import type { Campaign, Game, LiveChannel, TwitchClient } from './types.js';
 
 // Persisted query hashes, checked 2026-10-08 against DevilXD/TwitchDropsMiner (master 2026-09-26)
 // and live public calls. When Twitch changes one, GqlOperationError names it. Update the hash here.
@@ -14,6 +14,7 @@ export const OPS = {
   DirectoryPage_Game: '86bcceb4e8b1a51256ff8eed8bd8aae4acacf80d737efe904f84f3aeadf8cafd',
   DirectoryGameRedirect: '1f0300090caceec51f33c5e20647aceff9017f740f223c3c532ba6fa59f6b6cc',
   VideoPlayerStreamInfoOverlayChannel: '198492e0857f6aedead9665c81c5a06d67b25b58034649687124083ff288597d',
+  DropsHighlightService_AvailableDrops: '782dad0f032942260171d2d80a654f88bdd0c5a9dddc392e9bc92218a0f42d20',
 } as const;
 
 export type OpName = keyof typeof OPS;
@@ -54,14 +55,20 @@ export class TwitchApi implements TwitchClient {
 
   constructor(private readonly gql: GqlRequester, private readonly userId: string) {}
 
-  async getCampaigns(gameIds?: string[]): Promise<Campaign[]> {
+  // Since ~2026-09-18 Twitch returns dropCampaigns: null to app clients, so campaigns come from three places:
+  // the inventory (started ones, full data), the dashboard (in case it comes back), and live channels.
+  async getCampaigns(games: Game[]): Promise<Campaign[]> {
+    const gameIds = games.map((g) => g.id);
     const [inventoryRes, dashboardRes] = await this.gql.request([
       op('Inventory', { fetchRewardCampaigns: false }),
       op('ViewerDropsDashboard', { fetchRewardCampaigns: false }),
     ]);
     const inventory = inventoryRes?.data?.currentUser?.inventory ?? {};
+    const started: any[] = (inventory.dropCampaignsInProgress ?? []).filter(
+      (c: any) => c.status === 'ACTIVE' && c.game,
+    );
     const summaries: any[] = (dashboardRes?.data?.currentUser?.dropCampaigns ?? []).filter(
-      (c: any) => c.status === 'ACTIVE' && c.game && (!gameIds || gameIds.includes(String(c.game.id))),
+      (c: any) => c.status === 'ACTIVE' && c.game && gameIds.includes(String(c.game.id)),
     );
     const details: any[] = [];
     for (let i = 0; i < summaries.length; i += DETAILS_BATCH) {
@@ -74,7 +81,43 @@ export class TwitchApi implements TwitchClient {
         if (detail) details.push(detail);
       }
     }
-    return parseCampaigns(summaries, details, inventory);
+    const byId = new Map<string, Campaign>();
+    const sources = [
+      await this.discover(games),
+      parseCampaigns(summaries, details, inventory),
+      parseCampaigns(started, [], inventory),
+    ];
+    for (const campaign of sources.flat()) byId.set(campaign.id, campaign); // later sources have better data
+    return [...byId.values()];
+  }
+
+  private async discover(games: Game[]): Promise<Campaign[]> {
+    const found = new Map<string, Campaign>();
+    for (const game of games) {
+      const slug = game.slug ?? (await this.slugFor(game.name));
+      if (!slug) continue;
+      const res = await this.gql.request(op('DirectoryPage_Game', directoryVariables(slug, CHANNEL_LIMIT)));
+      const channels: LiveChannel[] = (res?.data?.game?.streams?.edges ?? [])
+        .map((e: any) => e?.node)
+        .filter((n: any) => n?.broadcaster)
+        .map(parseDirectoryStream);
+      for (let i = 0; i < channels.length; i += DETAILS_BATCH) {
+        const chunk = channels.slice(i, i + DETAILS_BATCH);
+        const responses: any[] = await this.gql.request(
+          chunk.map((ch) => op('DropsHighlightService_AvailableDrops', { channelID: ch.id })),
+        );
+        responses.forEach((r, j) => {
+          const raw = r?.data?.channel?.viewerDropCampaigns ?? [];
+          for (const campaign of parseAvailableCampaigns(raw, chunk[j])) {
+            if (campaign.game.id !== game.id) continue;
+            const known = found.get(campaign.id);
+            if (known) known.allowedChannels.push(...campaign.allowedChannels);
+            else found.set(campaign.id, campaign);
+          }
+        });
+      }
+    }
+    return [...found.values()];
   }
 
   async getLiveChannels(campaign: Campaign): Promise<LiveChannel[]> {
