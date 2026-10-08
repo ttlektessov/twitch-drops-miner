@@ -1,0 +1,22 @@
+[
+  {
+    "id": "camp-rust",
+    "name": "Rust Drops Round 42",
+    "status": "ACTIVE",
+    "startAt": "2026-10-01T00:00:00Z",
+    "endAt": "2026-10-12T00:00:00Z",
+    "accountLinkURL": "https://example.com/link-rust",
+    "self": { "isAccountConnected": true },
+    "game": { "id": "263490", "name": "Rust", "displayName": "Rust", "slug": "rust", "boxArtURL": "" }
+  },
+  {
+    "id": "camp-channel-badge",
+    "name": "SPOOKY SEASON",
+    "status": "ACTIVE",
+    "startAt": "2026-10-08T09:32:51.5Z",
+    "endAt": "2026-10-30T23:00:00Z",
+    "accountLinkURL": "",
+    "self": { "isAccountConnected": false },
+    "game": null
+  }
+]

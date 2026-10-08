@@ -1,0 +1,12 @@
+{
+  "live": {
+    "id": "135377687", "login": "posty", "displayName": "Posty",
+    "broadcastSettings": { "id": "135377687", "title": "SOLO", "game": { "id": "263490", "name": "Rust", "displayName": "Rust", "slug": "rust" } },
+    "stream": { "id": "317066421972", "viewersCount": 1132, "tags": [] }
+  },
+  "offline": {
+    "id": "37402112", "login": "shroud", "displayName": "shroud",
+    "broadcastSettings": { "id": "37402112", "title": "", "game": { "id": "771448419", "name": "AION 2", "displayName": "AION 2", "slug": "aion-2" } },
+    "stream": null
+  }
+}

@@ -1,0 +1,33 @@
+[
+  {
+    "id": "camp-rust",
+    "allow": { "isEnabled": true, "channels": null },
+    "self": { "isAccountConnected": true },
+    "timeBasedDrops": [
+      {
+        "id": "drop-hoodie", "name": "",
+        "startAt": "2026-10-01T00:00:00Z", "endAt": "2026-10-12T00:00:00Z",
+        "requiredMinutesWatched": 60, "requiredSubs": 0, "preconditionDrops": null,
+        "benefitEdges": [{ "benefit": { "id": "ben-hoodie", "name": "Hoodie", "distributionType": "DIRECT_ENTITLEMENT", "imageAssetURL": "" } }]
+      },
+      {
+        "id": "drop-door", "name": "Door Skin Drop",
+        "startAt": "2026-10-01T00:00:00Z", "endAt": "2026-10-12T00:00:00Z",
+        "requiredMinutesWatched": 120, "requiredSubs": 0, "preconditionDrops": [{ "id": "drop-hoodie" }],
+        "benefitEdges": [{ "benefit": { "id": "ben-door", "name": "Door Skin", "distributionType": "DIRECT_ENTITLEMENT", "imageAssetURL": "" } }]
+      },
+      {
+        "id": "drop-bandana", "name": "Bandana Drop",
+        "startAt": "2026-10-01T00:00:00Z", "endAt": "2026-10-12T00:00:00Z",
+        "requiredMinutesWatched": 30, "requiredSubs": 0, "preconditionDrops": null,
+        "benefitEdges": [{ "benefit": { "id": "ben-bandana", "name": "Bandana", "distributionType": "DIRECT_ENTITLEMENT", "imageAssetURL": "" } }]
+      },
+      {
+        "id": "drop-sub", "name": "Sub Badge",
+        "startAt": "2026-10-08T09:32:51.5Z", "endAt": "2026-10-12T00:00:00Z",
+        "requiredMinutesWatched": 0, "requiredSubs": 5, "preconditionDrops": null,
+        "benefitEdges": [{ "benefit": { "id": "ben-sub", "name": "Sub Badge", "distributionType": "BADGE", "imageAssetURL": "" } }]
+      }
+    ]
+  }
+]

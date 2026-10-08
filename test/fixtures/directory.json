@@ -1,0 +1,19 @@
+{
+  "data": {
+    "game": {
+      "id": "263490", "name": "Rust", "displayName": "Rust",
+      "streams": {
+        "edges": [
+          { "node": { "id": "321716771929", "title": "COWS TODAY???", "viewersCount": 18,
+            "broadcaster": { "id": "615893742", "login": "hope22_", "displayName": "Hope22_" },
+            "game": { "id": "263490", "name": "Rust", "displayName": "Rust", "slug": "rust" } } },
+          { "node": { "id": "317066421972", "title": "SOLO", "viewersCount": 1132,
+            "broadcaster": { "id": "135377687", "login": "posty", "displayName": "Posty" },
+            "game": { "id": "263490", "name": "Rust", "displayName": "Rust", "slug": "rust" } } },
+          { "node": { "id": "1", "title": "ghost", "viewersCount": 5000, "broadcaster": null,
+            "game": { "id": "263490", "name": "Rust", "displayName": "Rust", "slug": "rust" } } }
+        ]
+      }
+    }
+  }
+}

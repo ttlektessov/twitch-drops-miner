@@ -1,0 +1,13 @@
+{
+  "dropCampaignsInProgress": [
+    {
+      "id": "camp-rust",
+      "timeBasedDrops": [
+        { "id": "drop-hoodie", "self": { "currentMinutesWatched": 42, "dropInstanceID": null, "isClaimed": false } }
+      ]
+    }
+  ],
+  "gameEventDrops": [
+    { "id": "ben-bandana", "lastAwardedAt": "2026-10-05T10:00:00.5Z" }
+  ]
+}
